@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#173f3b" />
+  <meta name="description" content="通过模拟评估情境，练习从对错回馈到原题教学的四级提示策略。" />
+  <title>动态化评估｜四级提示系统</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%23173f3b'/%3E%3Cpath d='M18 18h28v7H18zm0 11h22v7H18zm0 11h16v7H18z' fill='%23f4bc5b'/%3E%3Ccircle cx='47' cy='44' r='7' fill='%23e86c52'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="styles-1.css" /><link rel="stylesheet" href="styles-2.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">4</div>
+        <div><p class="eyebrow">动态化评估实训</p><h1>四级提示系统</h1></div>
+      </div>
+      <button class="reset" id="resetBtn" type="button">重新开始</button>
+    </header>
+
+    <div class="layout">
+      <aside class="rail" aria-label="四级提示进度">
+        <h2 class="rail-title">提示阶梯</h2>
+        <p class="rail-note">从最少支持开始。仅在儿童仍未完成时，逐级增加支持。</p>
+        <div class="levels" id="levels">
+          <button class="level active" type="button" data-level="1"><span class="level-num">1</span><span class="level-copy"><strong>对错回馈</strong><small>温和鼓励再试</small></span><span class="level-state">●</span></button>
+          <button class="level" type="button" data-level="2" disabled><span class="level-num">2</span><span class="level-copy"><strong>口语提示</strong><small>给出明确线索</small></span><span class="level-state">○</span></button>
+          <button class="level" type="button" data-level="3" disabled><span class="level-num">3</span><span class="level-copy"><strong>平行题练习</strong><small>相似任务迁移</small></span><span class="level-state">○</span></button>
+          <button class="level" type="button" data-level="4" disabled><span class="level-num">4</span><span class="level-copy"><strong>原题目教学</strong><small>示范与必要辅助</small></span><span class="level-state">○</span></button>
+        </div>
+        <p class="principle"><strong>判断原则</strong><br>能在较低提示级别完成，说明其独立或潜在能力越强；需要的支持越多，教学起点越具体。</p>
+      </aside>
+
+      <section class="stage" aria-labelledby="sceneTitle">
+        <div class="scene-head">
+          <div><p class="scene-kicker" id="sceneKicker">观察阶段</p><h2 id="sceneTitle">儿童没有完成颜色配对</h2></div>
+          <div class="record" aria-live="polite"><strong>观察记录</strong><span id="recordText">等待评估者选择提示</span></div>
+        </div>
+
+        <div class="scene">
+          <div class="people" aria-label="评估者与儿童">
+            <div class="person assessor"><div class="avatar" aria-hidden="true">👩‍🏫</div><span>评估者</span><div class="bubble" id="bubble" hidden></div></div>
+            <div class="person student unsure" id="student"><div class="avatar" aria-hidden="true">🧒</div><span>儿童</span></div>
+          </div>
+          <div class="task" id="taskPanel">
+            <div class="task-inner">
+              <div class="task-label"><span id="taskName">原题：颜色配对</span><span id="taskHint">将蓝色积木放入同色位置</span></div>
+              <div class="task-area">
+                <div class="tray" id="sourceTray"><button class="block blue" id="draggable" type="button" aria-label="蓝色积木，可拖动或按回车选中"></button></div>
+                <div class="arrow" aria-hidden="true">→</div>
+                <div class="tray"><div class="target blue" id="dropTarget" role="button" tabindex="0" aria-label="蓝色配对位置，选中积木后按回车放置"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="feedback">
+          <div class="message"><div class="message-icon" aria-hidden="true">i</div><div><strong id="messageTitle">先给予最少量的支持</strong><span id="messageText">请选择“第一级：对错回馈”，观察儿童反应。</span></div></div>
+          <div class="actions" id="actions"><button class="action" type="button" data-action="level1">给予对错回馈</button></div>
+        </div>
+        <div class="summary" id="summary" hidden></div>
+        <div class="sr-only" id="live" aria-live="assertive"></div>
+      </section>
+    </div>
+  </main>
+
+  <script src="app-1.js"></script><script src="app-2.js"></script><script src="app-3.js"></script>
+</body>
+</html>
