@@ -81,10 +81,14 @@
     .person { position: relative; text-align: center; }
     .avatar { width: 82px; height: 82px; display: grid; place-items: center; background: white; border: 1px solid var(--line); border-radius: 50%; font-size: 3rem; box-shadow: 0 8px 24px rgba(23,63,59,.09); }
     .person span { display: block; margin-top: 8px; color: var(--ink-soft); font-size: .78rem; font-weight: 700; }
+    .assessor.smile .avatar { animation: assessor-smile 1.05s ease both; }
+    .assessor.smile::after { content: "✨"; position: absolute; right: -8px; top: -12px; font-size: 1.4rem; animation: sparkle 1.05s ease both; }
     .student.unsure .avatar { animation: unsure .9s ease-in-out infinite alternate; }
     .student.happy .avatar { animation: pop .55s ease; }
     .bubble { position: absolute; z-index: 3; left: 50%; bottom: 108px; width: max-content; max-width: 210px; padding: 12px 15px; background: white; border: 1px solid var(--line); border-radius: 16px 16px 16px 4px; box-shadow: 0 12px 30px rgba(23,63,59,.14); font-weight: 800; animation: bubble-in .35s ease both; }
-    .task { min-height: 280px; display: grid; place-items: center; padding: 20px; background: white; border: 1px dashed #bdc9bf; border-radius: 19px; }
+    .task { position: relative; min-height: 280px; display: grid; place-items: center; padding: 20px; background: white; border: 1px dashed #bdc9bf; border-radius: 19px; }
+    .task.demoing { pointer-events: none; }
+    .task.demoing .block { filter: saturate(1.12); }
     .task-inner { width: min(100%, 430px); }
     .task-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; color: var(--ink-soft); font-size: .83rem; font-weight: 700; }
     .task-area { display: grid; grid-template-columns: 1fr 58px 1fr; gap: 12px; align-items: center; }
@@ -103,6 +107,8 @@
     .target.filled { border-style: solid; }
     .target .block { cursor: default; animation: snap .45s cubic-bezier(.2,.8,.2,1); }
     .coach-hand { position: absolute; z-index: 4; font-size: 2.5rem; animation: guide 1.5s ease-in-out infinite; pointer-events: none; }
+    .coach-pointer { position: absolute; z-index: 5; font-size: 2.4rem; pointer-events: none; filter: drop-shadow(0 5px 8px rgba(23,63,59,.18)); animation: point-in 2.4s ease both; }
+    .demo-label { position: absolute; z-index: 6; left: 50%; top: 13px; transform: translateX(-50%); padding: 6px 12px; color: white; background: var(--coral); border-radius: 999px; font-size: .76rem; font-weight: 900; box-shadow: 0 7px 16px rgba(23,63,59,.14); }
     .feedback { min-height: 96px; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 18px 26px 22px; }
     .message { display: flex; align-items: flex-start; gap: 12px; color: var(--ink-soft); line-height: 1.55; }
     .message-icon { width: 34px; height: 34px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 10px; background: var(--amber-soft); color: #9a6210; font-weight: 900; }
@@ -123,11 +129,14 @@
     .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
     [hidden] { display: none !important; }
     @keyframes unsure { to { transform: rotate(-3deg) translateY(-3px); } }
+    @keyframes assessor-smile { 35% { transform: translateY(-5px) rotate(-4deg) scale(1.06); } 70% { transform: translateY(-2px) rotate(3deg); } }
+    @keyframes sparkle { 0% { opacity: 0; transform: scale(.4) rotate(-20deg); } 45% { opacity: 1; transform: scale(1.18) rotate(12deg); } 100% { opacity: 0; transform: scale(.7) rotate(24deg); } }
     @keyframes bubble-in { from { opacity: 0; transform: translate(-10px,8px) scale(.92); } }
     @keyframes pop { 50% { transform: scale(1.12); } }
     @keyframes pulse { 50% { box-shadow: 0 0 0 12px rgba(52,120,200,.12); } }
     @keyframes snap { from { transform: scale(.7) rotate(-8deg); opacity: .6; } }
     @keyframes guide { 0%,100% { transform: translate(-20px, 8px) rotate(-10deg); } 50% { transform: translate(70px, 5px) rotate(4deg); } }
+    @keyframes point-in { 0% { opacity: 0; transform: translate(-24px,18px) rotate(-16deg); } 22%,78% { opacity: 1; transform: translate(0,0) rotate(-5deg); } 55% { transform: translate(8px,-2px) rotate(2deg) scale(1.08); } 100% { opacity: 0; transform: translate(12px,-4px); } }
     @keyframes fade { from { opacity: 0; } }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; } }
     @media (max-width: 850px) {
@@ -217,10 +226,10 @@
 
   <script>
     (() => {
-      const state = { level: 1, done: [], mode: 'original', selected: false, hand: false };
+      const state = { level: 1, done: [], mode: 'original', selected: false, hand: false, demoing: false };
       const $ = (s) => document.querySelector(s);
       const els = {
-        levels: [...document.querySelectorAll('.level')], bubble: $('#bubble'), student: $('#student'),
+        levels: [...document.querySelectorAll('.level')], bubble: $('#bubble'), student: $('#student'), assessor: $('.assessor'),
         record: $('#recordText'), kicker: $('#sceneKicker'), title: $('#sceneTitle'), taskName: $('#taskName'),
         taskHint: $('#taskHint'), source: $('#sourceTray'), target: $('#dropTarget'), drag: $('#draggable'),
         messageTitle: $('#messageTitle'), messageText: $('#messageText'), actions: $('#actions'),
@@ -258,24 +267,51 @@
         els.target.setAttribute('aria-label', `${parallel ? '红' : '蓝'}色配对位置，选中积木后按回车放置`);
         els.target.innerHTML = ''; els.source.appendChild(els.drag); els.drag.hidden = false;
       };
+      const smileAssessor = () => {
+        els.assessor.classList.remove('smile'); void els.assessor.offsetWidth; els.assessor.classList.add('smile');
+        setTimeout(() => els.assessor.classList.remove('smile'), 1100);
+      };
+      const pointAtTarget = () => {
+        const pointer = document.createElement('div'); pointer.className = 'coach-pointer'; pointer.textContent = '👉'; pointer.setAttribute('aria-hidden','true');
+        els.taskPanel.appendChild(pointer); const r = els.target.getBoundingClientRect(), p = els.taskPanel.getBoundingClientRect();
+        pointer.style.left = (r.left - p.left - 34) + 'px'; pointer.style.top = (r.top - p.top + r.height / 2 - 22) + 'px';
+        setTimeout(() => pointer.remove(), 2450);
+      };
+      const demonstrateMatch = async (label) => {
+        state.demoing = true; state.selected = false; els.taskPanel.classList.add('demoing'); els.target.classList.add('highlight');
+        const badge = document.createElement('div'); badge.className = 'demo-label'; badge.textContent = label; els.taskPanel.appendChild(badge);
+        const hand = document.createElement('div'); hand.className = 'coach-pointer'; hand.textContent = '☝️'; hand.setAttribute('aria-hidden','true'); els.taskPanel.appendChild(hand);
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const from = els.drag.getBoundingClientRect(), to = els.target.getBoundingClientRect(), panel = els.taskPanel.getBoundingClientRect();
+        const dx = to.left + to.width / 2 - (from.left + from.width / 2), dy = to.top + to.height / 2 - (from.top + from.height / 2);
+        hand.style.left = (from.left - panel.left + from.width / 2 - 20) + 'px'; hand.style.top = (from.top - panel.top - 38) + 'px';
+        const frames = [{transform:'translate(0,0)'},{transform:`translate(${dx}px,${dy}px)`,offset:.72},{transform:`translate(${dx}px,${dy}px)`,offset:.84},{transform:'translate(0,0)'}];
+        const options = {duration:2200,easing:'ease-in-out',fill:'none'};
+        const blockAnimation = els.drag.animate(frames, options); hand.animate(frames, options);
+        await blockAnimation.finished.catch(() => {}); hand.remove(); badge.remove(); els.target.classList.remove('highlight');
+        els.taskPanel.classList.remove('demoing'); state.demoing = false;
+      };
       const runLevel1 = () => {
-        state.level = 1; bubble('我们再来一次。'); speak('我们再来一次。');
+        state.level = 1; bubble('我们再来一次。'); speak('我们再来一次。'); smileAssessor();
         els.record.textContent = '已给予温和鼓励'; els.messageTitle.textContent = '儿童仍未完成';
         els.messageText.textContent = '不要直接判错。观察后，再增加一小步支持。';
         unlock(1); setActions([{action:'level2', label:'进入第二级提示'}]); announce('已播放温和鼓励。儿童仍未完成，第二级提示已解锁。');
       };
       const runLevel2 = () => {
-        state.level = 2; bubble('拿一样颜色的。'); speak('拿一样颜色的。'); els.target.classList.add('highlight');
+        state.level = 2; bubble('拿一样颜色的。'); speak('拿一样颜色的。'); els.target.classList.add('highlight'); pointAtTarget();
         els.record.textContent = '已给予口语与视觉线索'; els.kicker.textContent = '第二级提示'; els.title.textContent = '突出任务中的关键特征';
         els.messageTitle.textContent = '明确线索后仍需支持'; els.messageText.textContent = '进入平行题，用相似但更易的任务进行示范和练习。';
         unlock(2); setTimeout(() => els.target.classList.remove('highlight'), 2600);
         setActions([{action:'level3', label:'进入平行题练习'}]); announce('相同颜色已高亮，平行题练习已解锁。');
       };
-      const runLevel3 = () => {
+      const runLevel3 = async () => {
         state.level = 3; setTask('parallel'); els.bubble.hidden = true; els.kicker.textContent = '第三级提示'; els.title.textContent = '先用相似题练习，再观察迁移';
-        els.record.textContent = '等待完成平行题'; els.messageTitle.textContent = '请完成红色积木配对';
-        els.messageText.textContent = '拖拽积木到同色位置；也可以选中积木后，在目标位置按回车。'; setActions([]); refreshRail();
-        announce('平行题开始。请把红色积木放入红色位置。');
+        els.record.textContent = '正在示范平行题'; els.messageTitle.textContent = '评估者先示范一次';
+        els.messageText.textContent = '观察红色积木如何与同色位置配对。示范完成后再由儿童操作。'; setActions([]); refreshRail();
+        bubble('看，我先做一次。'); speak('看，我先做一次。'); announce('平行题示范开始。'); await demonstrateMatch('评估者示范');
+        bubble('现在请你试一试。'); speak('现在请你试一试。'); els.record.textContent = '示范完成，等待儿童操作';
+        els.messageTitle.textContent = '轮到儿童完成红色积木配对'; els.messageText.textContent = '拖拽积木到同色位置；也可以选中积木后，在目标位置按回车。';
+        announce('示范完成。现在请把红色积木放入红色位置。');
       };
       const completeParallel = () => {
         if (state.mode !== 'parallel') return;
@@ -284,19 +320,23 @@
         els.messageText.textContent = '儿童能在平行题中完成。现在回到原题，检验是否能迁移。';
         setActions([{action:'level4', label:'返回原题教学'}]); speak('配对成功'); announce('平行题配对成功。第四级提示已解锁。');
       };
-      const runLevel4 = () => {
+      const runLevel4 = async () => {
         state.level = 4; setTask('original'); els.student.classList.add('unsure'); els.student.classList.remove('happy');
-        els.kicker.textContent = '第四级提示'; els.title.textContent = '回到原题，示范正确做法'; els.record.textContent = '等待观察原题表现';
+        els.kicker.textContent = '第四级提示'; els.title.textContent = '回到原题，示范正确做法'; els.record.textContent = '正在示范原题';
         bubble('看，我先示范一次。'); speak('看，我先示范一次。'); els.target.classList.add('highlight');
+        els.messageTitle.textContent = '评估者演示原题的正确做法'; els.messageText.textContent = '观察蓝色积木移动到同色位置，然后再让儿童尝试。'; setActions([]); refreshRail();
+        announce('已回到原题，正在示范正确做法。'); await demonstrateMatch('原题示范');
+        bubble('现在轮到你。'); speak('现在轮到你。'); els.record.textContent = '示范完成，等待观察原题表现';
         els.messageTitle.textContent = '完成示范后，给儿童尝试机会'; els.messageText.textContent = '可以直接拖拽完成；若儿童仍无反应，再选择手把手辅助。';
-        setActions([{action:'assist', label:'仍无反应，给予手把手辅助', kind:'coral'}]); refreshRail();
-        setTimeout(() => els.target.classList.remove('highlight'), 2400); announce('已回到原题并完成示范。');
+        setActions([{action:'assist', label:'仍无反应，给予手把手辅助', kind:'coral'}]); announce('原题示范完成，现在请儿童尝试。');
       };
       const assist = () => {
+        if (state.demoing) return;
+        state.demoing = true; setActions([]);
         state.hand = true; const hand = document.createElement('div'); hand.className='coach-hand'; hand.textContent='☝️'; hand.setAttribute('aria-hidden','true'); els.taskPanel.appendChild(hand);
         const r = els.drag.getBoundingClientRect(), p = els.taskPanel.getBoundingClientRect(); hand.style.left=(r.left-p.left+30)+'px'; hand.style.top=(r.top-p.top+20)+'px';
         bubble('我们一起做。'); speak('我们一起做。'); els.record.textContent = '使用手把手辅助';
-        setTimeout(() => { hand.remove(); placeBlock(); }, 1700); announce('正在进行手把手辅助。');
+        setTimeout(() => { hand.remove(); state.demoing = false; placeBlock(); }, 1700); announce('正在进行手把手辅助。');
       };
       const completeOriginal = () => {
         if (state.done.includes(4)) return; state.done.push(4); refreshRail();
@@ -304,6 +344,7 @@
         speak('完成了'); setTimeout(showSummary, 650);
       };
       const placeBlock = () => {
+        if (state.demoing) return;
         if (els.target.contains(els.drag)) return;
         els.drag.classList.remove('dragging'); els.drag.style.cssText=''; els.target.appendChild(els.drag); els.target.classList.add('filled');
         if (state.mode === 'parallel') completeParallel(); else if (state.level === 4) completeOriginal();
@@ -314,21 +355,21 @@
         els.summary.hidden = false; els.summary.querySelector('button').focus(); announce('评估完成，已生成提示层级总结。');
       };
       const reset = () => {
-        speechSynthesis?.cancel?.(); Object.assign(state,{level:1,done:[],mode:'original',selected:false,hand:false});
+        if ('speechSynthesis' in window) speechSynthesis.cancel(); Object.assign(state,{level:1,done:[],mode:'original',selected:false,hand:false,demoing:false});
         setTask('original'); els.summary.hidden=true; els.bubble.hidden=true; els.student.className='person student unsure';
         els.kicker.textContent='观察阶段'; els.title.textContent='儿童没有完成颜色配对'; els.record.textContent='等待评估者选择提示';
         els.messageTitle.textContent='先给予最少量的支持'; els.messageText.textContent='请选择“第一级：对错回馈”，观察儿童反应。';
         setActions([{action:'level1',label:'给予对错回馈'}]); refreshRail(); announce('练习已重新开始。');
       };
       const actions = { level1:runLevel1, level2:runLevel2, level3:runLevel3, level4:runLevel4, assist, reset };
-      document.addEventListener('click', e => { const a=e.target.closest('[data-action]'); if(a && actions[a.dataset.action]) actions[a.dataset.action](); });
+      document.addEventListener('click', e => { const a=e.target.closest('[data-action]'); if(a && actions[a.dataset.action] && (!state.demoing || a.dataset.action === 'reset')) actions[a.dataset.action](); });
       $('#resetBtn').addEventListener('click', reset);
-      els.levels.forEach(btn => btn.addEventListener('click', () => { const n=+btn.dataset.level; if(!btn.disabled && actions['level'+n]) actions['level'+n](); }));
-      els.drag.addEventListener('click', () => { state.selected=!state.selected; els.drag.style.outline=state.selected?'4px solid var(--amber)':''; announce(state.selected?'积木已选中，请选择目标位置':'已取消选择'); });
-      els.target.addEventListener('click', () => { if(state.selected) placeBlock(); });
-      els.target.addEventListener('keydown', e => { if((e.key==='Enter'||e.key===' ') && state.selected){e.preventDefault();placeBlock();} });
+      els.levels.forEach(btn => btn.addEventListener('click', () => { const n=+btn.dataset.level; if(!state.demoing && !btn.disabled && actions['level'+n]) actions['level'+n](); }));
+      els.drag.addEventListener('click', () => { if(state.demoing) return; state.selected=!state.selected; els.drag.style.outline=state.selected?'4px solid var(--amber)':''; announce(state.selected?'积木已选中，请选择目标位置':'已取消选择'); });
+      els.target.addEventListener('click', () => { if(!state.demoing && state.selected) placeBlock(); });
+      els.target.addEventListener('keydown', e => { if(!state.demoing && (e.key==='Enter'||e.key===' ') && state.selected){e.preventDefault();placeBlock();} });
       let dragOffset={x:0,y:0};
-      els.drag.addEventListener('pointerdown', e => { if(e.pointerType==='mouse' && e.button!==0) return; const r=els.drag.getBoundingClientRect(); dragOffset={x:e.clientX-r.left,y:e.clientY-r.top}; els.drag.setPointerCapture(e.pointerId); els.drag.classList.add('dragging'); els.drag.style.width=r.width+'px'; els.drag.style.height=r.height+'px'; els.drag.style.left=(e.clientX-dragOffset.x)+'px'; els.drag.style.top=(e.clientY-dragOffset.y)+'px'; });
+      els.drag.addEventListener('pointerdown', e => { if(state.demoing || (e.pointerType==='mouse' && e.button!==0)) return; const r=els.drag.getBoundingClientRect(); dragOffset={x:e.clientX-r.left,y:e.clientY-r.top}; els.drag.setPointerCapture(e.pointerId); els.drag.classList.add('dragging'); els.drag.style.width=r.width+'px'; els.drag.style.height=r.height+'px'; els.drag.style.left=(e.clientX-dragOffset.x)+'px'; els.drag.style.top=(e.clientY-dragOffset.y)+'px'; });
       els.drag.addEventListener('pointermove', e => { if(!els.drag.classList.contains('dragging')) return; els.drag.style.left=(e.clientX-dragOffset.x)+'px'; els.drag.style.top=(e.clientY-dragOffset.y)+'px'; const r=els.target.getBoundingClientRect(); els.target.classList.toggle('over',e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom); });
       els.drag.addEventListener('pointerup', e => { if(!els.drag.classList.contains('dragging')) return; const r=els.target.getBoundingClientRect(), hit=e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom; els.target.classList.remove('over'); els.drag.classList.remove('dragging'); els.drag.style.cssText=''; if(hit) placeBlock(); });
 
